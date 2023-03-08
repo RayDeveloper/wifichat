@@ -29,6 +29,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.text.CollationElementIterator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -39,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
 
     Button btnOnOff, btnDiscover, btnSend;
     ListView listView;
-    TextView read_msg_box, connectionStatus;
+    TextView read_msg_box, connectionStatus, messageTextView;
     EditText writeMsg;
 
     WifiManager wifiManager;
@@ -239,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
                                 @Override
                                 public void run() {
                                     String tempMSG = new String(buffer,0,finalBytes);
-                                    read_msg_box.setText(tempMSG);
+                                    messageTextView.setText(tempMSG);
                                 }
                             });
                         }
