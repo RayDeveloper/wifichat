@@ -28,11 +28,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.text.CollationElementIterator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
@@ -54,6 +57,11 @@ public class MainActivity extends AppCompatActivity {
     WifiP2pDevice[] deviceArray;
 
     Socket socket;
+
+    ServerClass serverClass;
+    ClientClass clientClass;
+
+    boolean isHost;
 
 
 
@@ -124,6 +132,29 @@ public class MainActivity extends AppCompatActivity {
                 }
 
         });
+
+        btnSend.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ExecutorService executor = Executors.newSingleThreadExecutor();
+                String msg = read_msg_box.getText().toString();
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        if(msg != null && isHost) {
+
+                            serverClass.write(msg.getBytes());
+
+                        }else if (msg != null && !isHost){
+                            clientClass.write(msg.getBytes());
+
+                        }
+
+                    }
+                });
+            }
+        });
+
     }
 
     private void initialWork() {
@@ -182,9 +213,16 @@ public class MainActivity extends AppCompatActivity {
 
             if(wifiP2pInfo.groupFormed && wifiP2pInfo.isGroupOwner){
                 connectionStatus.setText("Host");
+                isHost = true;
+                serverClass= new ServerClass();
+                serverClass.start();
 
             }else if(wifiP2pInfo.groupFormed){
                 connectionStatus.setText("Client");
+                isHost = false;
+                clientClass = new ClientClass(grupOwnerAddress);
+
+
             }
         }
     };
@@ -203,6 +241,63 @@ public class MainActivity extends AppCompatActivity {
         unregisterReceiver(mReceiver);
     }
 
+    public class ServerClass extends Thread{
+        ServerSocket serverSocket;
+        private InputStream inputStream;
+        private OutputStream outputStream;
+
+
+        public void write(byte[] bytes){
+            try {
+                outputStream.write(bytes);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void run() {
+            try {
+                serverSocket = new ServerSocket(8888);
+                socket = serverSocket.accept();
+                inputStream = socket.getInputStream();
+                outputStream = socket.getOutputStream();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            Handler handler = new Handler(Looper.getMainLooper());
+
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    byte[] buffer = new byte[1024];
+                    int bytes;
+
+                    while (socket != null){
+                        try {
+                            bytes = inputStream.read(buffer);
+                            if(bytes >0){
+                                int finalBytes = bytes;
+                                handler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        String tempMSG = new String(buffer,0,finalBytes);
+                                        messageTextView.setText(tempMSG);
+                                    }
+                                });
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            });
+            //super.run();
+
+        }
+    }
+
     public class ClientClass extends Thread{
         String hostAdd;
         private InputStream inputStream;
@@ -213,6 +308,15 @@ public class MainActivity extends AppCompatActivity {
             socket = new Socket();
 
         }
+
+        public void write(byte[] bytes){
+            try {
+                outputStream.write(bytes);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         @Override
         public void run(){
             try {
