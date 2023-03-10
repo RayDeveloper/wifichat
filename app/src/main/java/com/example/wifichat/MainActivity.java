@@ -2,6 +2,7 @@ package com.example.wifichat;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.InetAddresses;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -12,6 +13,7 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -41,10 +43,10 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
-    Button btnOnOff, btnDiscover, btnSend;
+    Button aSwitch, discoverButton, btnSend;
     ListView listView;
     TextView read_msg_box, connectionStatus, messageTextView;
-    EditText writeMsg;
+    EditText typeMsg;
 
     WifiManager wifiManager;
     WifiP2pManager mManager;
@@ -74,20 +76,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void exqListener() {
-        btnOnOff.setOnClickListener(new View.OnClickListener() {
+        aSwitch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (wifiManager.isWifiEnabled()) {
-                    wifiManager.setWifiEnabled(false);
-                    btnOnOff.setText("OFF");
-                } else {
-                    wifiManager.setWifiEnabled(true);
-                    btnOnOff.setText("ON");
-                }
+                Intent intent = new Intent(Settings.ACTION_WIFI_SETTINGS);
+                startActivityForResult(intent,1);
             }
         });
 
-        btnDiscover.setOnClickListener(new View.OnClickListener() {
+        discoverButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mManager.discoverPeers(mChannel, new WifiP2pManager.ActionListener() {
@@ -117,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onSuccess() {
                                 Toast.makeText(MainActivity.this, "Connected to:"+ device.deviceName, Toast.LENGTH_SHORT).show();
-                                connectionStatus.setText("Connected to:"+device.deviceAddress);
+                                connectionStatus.setText("Connected to:"+device.deviceName);
                             }
 
                             @Override
@@ -137,7 +134,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 ExecutorService executor = Executors.newSingleThreadExecutor();
-                String msg = read_msg_box.getText().toString();
+                String msg = typeMsg.getText().toString();
+                //String msg = "Raydon";
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
@@ -158,13 +156,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initialWork() {
-        btnOnOff = findViewById(R.id.onOff);
-        btnDiscover = findViewById(R.id.discover);
+        aSwitch = findViewById(R.id.switch1);
+        discoverButton = findViewById(R.id.buttonDiscover);
         btnSend = findViewById(R.id.sendButton);
-        listView = findViewById(R.id.peerListView);
-        read_msg_box = findViewById(R.id.readMsg);
+        listView = findViewById(R.id.listView);
+        read_msg_box = findViewById(R.id.messageTextView);
         connectionStatus = findViewById(R.id.connectionStatus);
-        writeMsg = findViewById(R.id.writeMsg);
+        typeMsg = findViewById(R.id.editTextTypeMsg);
 
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
@@ -209,7 +207,8 @@ public class MainActivity extends AppCompatActivity {
     WifiP2pManager.ConnectionInfoListener connectionInfoListener = new WifiP2pManager.ConnectionInfoListener() {
         @Override
         public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo) {
-            final InetAddress grupOwnerAddress = wifiP2pInfo.groupOwnerAddress;
+            final InetAddress groupOwnerAddress = wifiP2pInfo.groupOwnerAddress;
+
 
             if(wifiP2pInfo.groupFormed && wifiP2pInfo.isGroupOwner){
                 connectionStatus.setText("Host");
@@ -220,7 +219,8 @@ public class MainActivity extends AppCompatActivity {
             }else if(wifiP2pInfo.groupFormed){
                 connectionStatus.setText("Client");
                 isHost = false;
-                clientClass = new ClientClass(grupOwnerAddress);
+                clientClass = new ClientClass(groupOwnerAddress);
+                clientClass.start();
 
 
             }
@@ -283,7 +283,7 @@ public class MainActivity extends AppCompatActivity {
                                     @Override
                                     public void run() {
                                         String tempMSG = new String(buffer,0,finalBytes);
-                                        messageTextView.setText(tempMSG);
+                                        read_msg_box.setText(tempMSG);//read_msg_box
                                     }
                                 });
                             }
@@ -293,7 +293,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
-            //super.run();
+            super.run();
 
         }
     }
@@ -311,6 +311,7 @@ public class MainActivity extends AppCompatActivity {
 
         public void write(byte[] bytes){
             try {
+                //inputStream.read(bytes);
                 outputStream.write(bytes);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -327,7 +328,7 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
-            Executor executor = Executors.newSingleThreadExecutor();
+            ExecutorService executor = Executors.newSingleThreadExecutor();
             Handler handler = new Handler(Looper.getMainLooper());
 
             executor.execute(new Runnable (){
@@ -344,7 +345,7 @@ public class MainActivity extends AppCompatActivity {
                                 @Override
                                 public void run() {
                                     String tempMSG = new String(buffer,0,finalBytes);
-                                    messageTextView.setText(tempMSG);
+                                    read_msg_box.setText(tempMSG); //typeMsg
                                 }
                             });
                         }
@@ -353,6 +354,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
+            super.run();
         }
 
 
