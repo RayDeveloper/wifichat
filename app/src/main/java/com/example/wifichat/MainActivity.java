@@ -106,27 +106,27 @@ public class MainActivity extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l){
-                       final WifiP2pDevice device =deviceArray[i];
-                        WifiP2pConfig config = new WifiP2pConfig();
-                        config.deviceAddress = device.deviceAddress;
+                final WifiP2pDevice device =deviceArray[i];
+                WifiP2pConfig config = new WifiP2pConfig();
+                config.deviceAddress = device.deviceAddress;
 
-                        mManager.connect(mChannel, config, new WifiP2pManager.ActionListener() {
-                            @Override
-                            public void onSuccess() {
-                                Toast.makeText(MainActivity.this, "Connected to:"+ device.deviceName, Toast.LENGTH_SHORT).show();
-                                connectionStatus.setText("Connected to:"+device.deviceName);
-                            }
+                mManager.connect(mChannel, config, new WifiP2pManager.ActionListener() {
+                    @Override
+                    public void onSuccess() {
+                        Toast.makeText(MainActivity.this, "Connected to:"+ device.deviceName, Toast.LENGTH_SHORT).show();
+                        connectionStatus.setText("Connected to:"+device.deviceName);
+                    }
 
-                            @Override
-                            public void onFailure(int i) {
+                    @Override
+                    public void onFailure(int i) {
 
-                                Toast.makeText(MainActivity.this, "Not Connected", Toast.LENGTH_SHORT).show();
-                                connectionStatus.setText("Not Connected");
+                        Toast.makeText(MainActivity.this, "Not Connected", Toast.LENGTH_SHORT).show();
+                        connectionStatus.setText("Not Connected");
 
-                            }
-                        });
+                    }
+                });
 
-                }
+            }
 
         });
 
@@ -135,34 +135,38 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 String msg = typeMsg.getText().toString();
-                //String msg = "Raydon";
+                Toast.makeText(MainActivity.this, "text to send:"+ msg, Toast.LENGTH_SHORT).show();
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         if(msg != null && isHost) {
 
                             serverClass.write(msg.getBytes());
+                            //Toast.makeText(MainActivity.this, "text:"+ msg, Toast.LENGTH_SHORT).show();
 
                         }else if (msg != null && !isHost){
                             clientClass.write(msg.getBytes());
+                            //Toast.makeText(MainActivity.this, "text:"+ msg, Toast.LENGTH_SHORT).show();
 
                         }
 
                     }
                 });
+
+
             }
         });
 
     }
 
     private void initialWork() {
-        aSwitch = findViewById(R.id.switch1);
-        discoverButton = findViewById(R.id.buttonDiscover);
+        aSwitch = findViewById(R.id.onOff);
+        discoverButton = findViewById(R.id.discover);
         btnSend = findViewById(R.id.sendButton);
-        listView = findViewById(R.id.listView);
-        read_msg_box = findViewById(R.id.messageTextView);
+        listView = findViewById(R.id.peerListView);
+        read_msg_box = findViewById(R.id.readMsg);
         connectionStatus = findViewById(R.id.connectionStatus);
-        typeMsg = findViewById(R.id.editTextTypeMsg);
+        typeMsg = findViewById(R.id.writeMsg);
 
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
@@ -228,17 +232,22 @@ public class MainActivity extends AppCompatActivity {
     };
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
+        mReceiver = new WifiDirectBroadcastReceiver(mManager,mChannel,this);
         registerReceiver(mReceiver, mIntentFilter);
 
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         super.onPause();
 
         unregisterReceiver(mReceiver);
+        //registerReceiver(mReceiver, mIntentFilter);
+
+       // if (mReceiver!= null)
+           // unregisterReceiver(mReceiver);
     }
 
     public class ServerClass extends Thread{
@@ -250,6 +259,7 @@ public class MainActivity extends AppCompatActivity {
         public void write(byte[] bytes){
             try {
                 outputStream.write(bytes);
+                outputStream.flush();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -311,8 +321,8 @@ public class MainActivity extends AppCompatActivity {
 
         public void write(byte[] bytes){
             try {
-                //inputStream.read(bytes);
                 outputStream.write(bytes);
+                outputStream.flush();
             } catch (IOException e) {
                 e.printStackTrace();
             }
